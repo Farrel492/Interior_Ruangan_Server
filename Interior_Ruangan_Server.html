@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Interior Ruangan Server — LEPKOM</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #020810;
+  --cyan: #00d4ff;
+  --green: #00ff88;
+  --amber: #ffaa00;
+  --red: #ff4466;
+  --purple: #aa66ff;
+  --mono: 'Share Tech Mono', monospace;
+  --head: 'Rajdhani', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  font-family: var(--mono);
+  color: #c0d8f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LOADER ── */
+#loader {
+  position: fixed; inset: 0; z-index: 999;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 18px;
+  transition: opacity .7s ease, visibility .7s ease;
+}
+#loader.out { opacity: 0; visibility: hidden; }
+.ld-title { font-size: 12px; color: var(--cyan); letter-spacing: 4px; }
+.ld-prog-w { width: 260px; height: 2px; background: rgba(0,212,255,.1); border-radius: 1px; overflow: hidden; }
+.ld-prog { height: 100%; background: var(--cyan); width: 0; animation: prog 2.2s ease forwards; box-shadow: 0 0 8px var(--cyan); }
+@keyframes prog { to { width: 100%; } }
+.ld-msg { font-size: 10px; color: #3a5a7a; letter-spacing: 2px; }
+
+/* ── PAGE ── */
+.page { max-width: 1200px; margin: 0 auto; padding: 28px 18px 60px; opacity: 0; animation: reveal .6s ease 2.6s forwards; }
+@keyframes reveal { to { opacity: 1; } }
+
+/* ── HEADER ── */
+.hdr { text-align: center; margin-bottom: 28px; }
+.hdr-tag { font-size: 10px; color: var(--cyan); letter-spacing: 3px; margin-bottom: 8px; }
+.hdr-title { font-family: var(--head); font-size: clamp(22px, 4vw, 36px); font-weight: 700; color: #fff; letter-spacing: 1px; }
+.hdr-title span { color: var(--cyan); }
+.hdr-sub { font-size: 12px; color: #4a7090; margin-top: 6px; letter-spacing: 1px; }
+
+/* ── SCENE CONTAINER ── */
+.scene-wrap {
+  position: relative;
+  background: linear-gradient(180deg, #040c18 0%, #060f1e 100%);
+  border: 1px solid rgba(0,212,255,.15);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+/* ── SCENE CANVAS ── */
+.scene {
+  width: 100%;
+  position: relative;
+  padding-bottom: 62%; /* aspect ratio */
+  overflow: hidden;
+}
+.scene svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── LABELS overlay ── */
+.label-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.lbl {
+  position: absolute;
+  background: rgba(2,8,16,.85);
+  border: 1px solid rgba(0,212,255,.35);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  color: var(--cyan);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  pointer-events: all;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.lbl::before {
+  content: '';
+  position: absolute;
+  background: rgba(0,212,255,.3);
+}
+.lbl:hover {
+  background: rgba(0,212,255,.12);
+  border-color: var(--cyan);
+  transform: scale(1.05);
+}
+.lbl-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.lbl-green { border-color: rgba(0,255,136,.4); color: var(--green); }
+.lbl-green:hover { background: rgba(0,255,136,.1); border-color: var(--green); }
+.lbl-amber { border-color: rgba(255,170,0,.4); color: var(--amber); }
+.lbl-amber:hover { background: rgba(255,170,0,.1); border-color: var(--amber); }
+.lbl-red { border-color: rgba(255,68,102,.4); color: var(--red); }
+.lbl-red:hover { background: rgba(255,68,102,.1); border-color: var(--red); }
+
+/* ── INFO PANEL ── */
+.info-panel {
+  background: rgba(2,8,16,.95);
+  border-top: 1px solid rgba(0,212,255,.15);
+  padding: 14px 20px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.info-stat { text-align: center; }
+.info-stat-val { font-size: 18px; font-weight: 700; font-family: var(--head); line-height: 1; }
+.info-stat-label { font-size: 9px; color: #3a5a7a; letter-spacing: 1px; margin-top: 3px; }
+
+/* ── DETAIL CARD ── */
+.detail-card {
+  display: none;
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 500;
+  background: #040c18;
+  border: 1px solid rgba(0,212,255,.4);
+  border-radius: 14px;
+  padding: 22px;
+  min-width: 300px;
+  max-width: 420px;
+  box-shadow: 0 0 60px rgba(0,212,255,.15), 0 20px 60px rgba(0,0,0,.8);
+  animation: popIn .2s ease;
+}
+@keyframes popIn { from { opacity:0; transform:translate(-50%,-48%) scale(.95); } to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
+.detail-card.show { display: block; }
+.detail-close { position: absolute; top: 14px; right: 14px; background: none; border: none; color: #4a7090; cursor: pointer; font-size: 16px; }
+.detail-close:hover { color: #fff; }
+.detail-title { font-family: var(--head); font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.detail-sub { font-size: 10px; color: #4a7090; letter-spacing: 2px; margin-bottom: 16px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.detail-item { background: #060f1e; border: 1px solid rgba(0,212,255,.1); border-radius: 8px; padding: 8px 10px; }
+.detail-item-label { font-size: 9px; color: #3a5a7a; letter-spacing: 1px; margin-bottom: 3px; }
+.detail-item-val { font-size: 14px; font-weight: 600; }
+.detail-desc { font-size: 11px; color: #6a90b0; line-height: 1.6; }
+.overlay { display:none; position:fixed; inset:0; z-index:499; background:rgba(0,0,0,.6); }
+.overlay.show { display:block; }
+
+/* ── BOTTOM PANELS ── */
+.bottom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.b-card { background: #040c18; border: 1px solid rgba(0,212,255,.12); border-radius: 12px; overflow: hidden; }
+.b-card-head { padding: 10px 14px; border-bottom: 1px solid rgba(0,212,255,.08); display: flex; align-items: center; justify-content: space-between; }
+.b-card-title { font-size: 9px; color: var(--cyan); letter-spacing: 2px; }
+.b-card-body { padding: 12px 14px; }
+
+/* TEMP GAUGE */
+.gauge-wrap { display: flex; justify-content: center; margin-bottom: 10px; }
+.gauge-item { text-align: center; flex: 1; }
+.gauge-val { font-size: 22px; font-weight: 700; font-family: var(--head); }
+.gauge-label { font-size: 9px; color: #3a5a7a; letter-spacing: 1px; margin-top: 2px; }
+.gauge-bar-h { height: 4px; background: rgba(255,255,255,.05); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.gauge-bar-fill { height: 100%; border-radius: 2px; position: relative; overflow: hidden; }
+.gauge-bar-fill::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent); animation: shim 2s linear infinite; }
+@keyframes shim { from{transform:translateX(-100%)} to{transform:translateX(100%)} }
+
+/* RULES LIST */
+.rule-list { display: flex; flex-direction: column; gap: 6px; }
+.rule-item { display: flex; align-items: flex-start; gap: 8px; padding: 7px 8px; background: #060f1e; border-radius: 7px; border: 1px solid rgba(0,212,255,.07); font-size: 11px; color: #6a90b0; line-height: 1.4; }
+.rule-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+/* ALERT LIST */
+.alert-list { display: flex; flex-direction: column; gap: 6px; }
+.alert-item { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 7px; border: 1px solid; font-size: 11px; }
+.alert-ok   { border-color: rgba(0,255,136,.15); color: var(--green); }
+.alert-warn { border-color: rgba(255,170,0,.15);  color: var(--amber); }
+.alert-info { border-color: rgba(0,212,255,.15);  color: var(--cyan);  }
+
+@media (max-width: 700px) {
+  .info-panel { grid-template-columns: repeat(3,1fr); }
+  .bottom-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-title">LEPKOM SERVER ROOM INTERIOR</div>
+  <div class="ld-prog-w"><div class="ld-prog"></div></div>
+  <div class="ld-msg">Rendering 3D environment...</div>
+</div>
+
+<!-- OVERLAY + DETAIL CARD -->
+<div class="overlay" id="overlay" onclick="closeDetail()"></div>
+<div class="detail-card" id="detailCard">
+  <button class="detail-close" onclick="closeDetail()">✕</button>
+  <div class="detail-title" id="dTitle">—</div>
+  <div class="detail-sub" id="dSub">—</div>
+  <div class="detail-grid" id="dGrid"></div>
+  <div class="detail-desc" id="dDesc">—</div>
+</div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-tag">LEPKOM · UNIVERSITAS GUNADARMA</div>
+    <div class="hdr-title">Interior <span>Ruangan Server</span></div>
+    <div class="hdr-sub">Visualisasi perspektif — klik komponen untuk detail lengkap</div>
+  </div>
+
+  <!-- MAIN SCENE -->
+  <div class="scene-wrap">
+    <div class="scene">
+      <svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" id="mainSvg">
+        <defs>
+          <!-- Ceiling light gradient -->
+          <radialGradient id="ceilLight1" cx="35%" cy="0%" r="60%">
+            <stop offset="0%" stop-color="rgba(180,220,255,0.18)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+          </radialGradient>
+          <radialGradient id="ceilLight2" cx="65%" cy="0%" r="60%">
+            <stop offset="0%" stop-color="rgba(180,220,255,0.14)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+          </radialGradient>
+          <radialGradient id="floorGlow" cx="50%" cy="100%" r="60%">
+            <stop offset="0%" stop-color="rgba(0,212,255,0.06)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+          </radialGradient>
+          <filter id="glow3">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow5">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow8">
+            <feGaussianBlur stdDeviation="8" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <linearGradient id="wallLeft" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#08141e"/>
+            <stop offset="100%" stop-color="#0a1828"/>
+          </linearGradient>
+          <linearGradient id="wallRight" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#0a1828"/>
+            <stop offset="100%" stop-color="#06101a"/>
+          </linearGradient>
+          <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0d1e2e"/>
+            <stop offset="100%" stop-color="#060e18"/>
+          </linearGradient>
+          <linearGradient id="ceiling" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0a1622"/>
+            <stop offset="100%" stop-color="#06101a"/>
+          </linearGradient>
+          <!-- Rack gradient -->
+          <linearGradient id="rackGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#0a1828"/>
+            <stop offset="40%" stop-color="#0d2035"/>
+            <stop offset="100%" stop-color="#060e1a"/>
+          </linearGradient>
+          <linearGradient id="rackTop" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1a2a3a"/>
+            <stop offset="100%" stop-color="#0a1828"/>
+          </linearGradient>
+          <linearGradient id="acGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0a1e2e"/>
+            <stop offset="100%" stop-color="#06121c"/>
+          </linearGradient>
+          <linearGradient id="raisedFloor" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0d1e30"/>
+            <stop offset="100%" stop-color="#08141e"/>
+          </linearGradient>
+          <marker id="arrC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="rgba(0,212,255,0.6)" stroke-width="1.5"/>
+          </marker>
+        </defs>
+
+        <!-- ══ ROOM STRUCTURE ══ -->
+        <!-- Back wall -->
+        <rect x="0" y="0" width="1000" height="620" fill="#040c14"/>
+
+        <!-- Ceiling -->
+        <polygon points="0,0 1000,0 800,130 200,130" fill="url(#ceiling)"/>
+        <!-- Ceiling edge -->
+        <line x1="200" y1="130" x2="800" y2="130" stroke="rgba(0,212,255,0.15)" stroke-width="1"/>
+
+        <!-- Left wall -->
+        <polygon points="0,0 200,130 200,580 0,620" fill="url(#wallLeft)"/>
+        <!-- Right wall -->
+        <polygon points="1000,0 800,130 800,580 1000,620" fill="url(#wallRight)"/>
+
+        <!-- Floor -->
+        <polygon points="0,620 200,580 800,580 1000,620" fill="url(#floorGrad)"/>
+
+        <!-- Back wall face -->
+        <polygon points="200,130 800,130 800,580 200,580" fill="#060f1c"/>
+
+        <!-- Ceiling lights glow -->
+        <polygon points="0,0 1000,0 800,130 200,130" fill="url(#ceilLight1)"/>
+        <polygon points="0,0 1000,0 800,130 200,130" fill="url(#ceilLight2)"/>
+
+        <!-- Floor glow -->
+        <polygon points="0,620 200,580 800,580 1000,620" fill="url(#floorGlow)"/>
+
+        <!-- Floor tile pattern -->
+        <g opacity="0.18">
+          <!-- Perspective floor grid -->
+          <line x1="200" y1="580" x2="0" y2="620" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="300" y1="580" x2="125" y2="620" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="400" y1="580" x2="250" y2="620" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="500" y1="580" x2="375" y2="620" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="600" y1="580" x2="500" y2="620" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="700" y1="580" x2="625" y2="620" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="800" y1="580" x2="750" y2="620" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="875" y1="620" x2="800" y2="580" stroke="#1a3a5a" stroke-width="0.5"/>
+          <!-- Horizontal floor lines -->
+          <line x1="0" y1="620" x2="1000" y2="620" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="40" y1="612" x2="960" y2="612" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="110" y1="600" x2="890" y2="600" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="155" y1="590" x2="845" y2="590" stroke="#1a3a5a" stroke-width="0.5"/>
+          <line x1="200" y1="580" x2="800" y2="580" stroke="rgba(0,212,255,0.2)" stroke-width="0.8"/>
+        </g>
+
+        <!-- Raised floor edge -->
+        <polygon points="200,580 800,580 800,592 200,592" fill="#0a1828" stroke="rgba(0,212,255,0.15)" stroke-width="0.5"/>
+        <text x="500" y="589" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(0,212,255,0.3)" letter-spacing="3">RAISED FLOOR — CABLE TRAY</text>
+
+        <!-- Left wall details (side panels) -->
+        <polygon points="0,0 200,130 200,580 0,620" fill="rgba(8,20,30,0.5)"/>
+        <!-- Left wall vertical lines -->
+        <line x1="50" y1="10" x2="200" y2="140" stroke="rgba(0,212,255,0.06)" stroke-width="0.5"/>
+        <line x1="100" y1="5" x2="200" y2="130" stroke="rgba(0,212,255,0.06)" stroke-width="0.5"/>
+        <line x1="150" y1="2" x2="200" y2="130" stroke="rgba(0,212,255,0.06)" stroke-width="0.5"/>
+
+        <!-- Right wall details -->
+        <polygon points="1000,0 800,130 800,580 1000,620" fill="rgba(6,14,24,0.5)"/>
+        <line x1="950" y1="10" x2="800" y2="140" stroke="rgba(0,212,255,0.06)" stroke-width="0.5"/>
+        <line x1="900" y1="5" x2="800" y2="130" stroke="rgba(0,212,255,0.06)" stroke-width="0.5"/>
+
+        <!-- ══ CEILING INFRASTRUCTURE ══ -->
+        <!-- Cable tray ceiling (top) -->
+        <rect x="280" y="132" width="440" height="10" fill="#0a1826" stroke="rgba(0,212,255,0.2)" stroke-width="0.5"/>
+        <rect x="280" y="132" width="440" height="4" fill="#0d2030"/>
+        <!-- Cable tray grid lines -->
+        <g stroke="rgba(0,212,255,0.12)" stroke-width="0.5">
+          <line x1="320" y1="132" x2="320" y2="142"/>
+          <line x1="360" y1="132" x2="360" y2="142"/>
+          <line x1="400" y1="132" x2="400" y2="142"/>
+          <line x1="440" y1="132" x2="440" y2="142"/>
+          <line x1="480" y1="132" x2="480" y2="142"/>
+          <line x1="520" y1="132" x2="520" y2="142"/>
+          <line x1="560" y1="132" x2="560" y2="142"/>
+          <line x1="600" y1="132" x2="600" y2="142"/>
+          <line x1="640" y1="132" x2="640" y2="142"/>
+          <line x1="680" y1="132" x2="680" y2="142"/>
+        </g>
+        <!-- Cables in tray -->
+        <line x1="290" y1="136" x2="710" y2="136" stroke="#e11d48" stroke-width="1.5" opacity="0.6"/>
+        <line x1="290" y1="138" x2="710" y2="138" stroke="#3b82f6" stroke-width="1.5" opacity="0.6"/>
+        <line x1="290" y1="140" x2="710" y2="140" stroke="#22c55e" stroke-width="1.5" opacity="0.6"/>
+
+        <!-- ══ CEILING LIGHTS ══ -->
+        <!-- Light fixture 1 -->
+        <g filter="url(#glow5)">
+          <rect x="310" y="130" width="80" height="8" rx="2" fill="#c0e0ff" opacity="0.9"/>
+          <rect x="310" y="130" width="80" height="8" rx="2" fill="white" opacity="0.3"/>
+        </g>
+        <!-- Light cone 1 -->
+        <polygon points="310,138 390,138 450,580 250,580" fill="rgba(200,230,255,0.025)"/>
+        <!-- Light fixture 2 -->
+        <g filter="url(#glow5)">
+          <rect x="610" y="130" width="80" height="8" rx="2" fill="#c0e0ff" opacity="0.9"/>
+          <rect x="610" y="130" width="80" height="8" rx="2" fill="white" opacity="0.3"/>
+        </g>
+        <!-- Light cone 2 -->
+        <polygon points="610,138 690,138 750,580 550,580" fill="rgba(200,230,255,0.025)"/>
+
+        <!-- Emergency light (red) left -->
+        <circle cx="215" cy="150" r="5" fill="#ff2244" filter="url(#glow5)">
+          <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Emergency light right -->
+        <circle cx="785" cy="150" r="5" fill="#ff2244" filter="url(#glow5)">
+          <animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- ══ BACK WALL DETAILS ══ -->
+        <!-- Back wall baseboard -->
+        <rect x="200" y="562" width="600" height="18" fill="#0a1626" stroke="rgba(0,212,255,0.1)" stroke-width="0.5"/>
+        <!-- Back wall top trim -->
+        <rect x="200" y="130" width="600" height="6" fill="#0d1e30"/>
+        <!-- Back wall horizontal line guides -->
+        <line x1="200" y1="200" x2="800" y2="200" stroke="rgba(0,212,255,0.04)" stroke-width="0.5"/>
+        <line x1="200" y1="300" x2="800" y2="300" stroke="rgba(0,212,255,0.04)" stroke-width="0.5"/>
+        <line x1="200" y1="400" x2="800" y2="400" stroke="rgba(0,212,255,0.04)" stroke-width="0.5"/>
+        <line x1="200" y1="500" x2="800" y2="500" stroke="rgba(0,212,255,0.04)" stroke-width="0.5"/>
+
+        <!-- ══ AC UNIT LEFT WALL ══ -->
+        <!-- AC unit 1 — left wall -->
+        <g cursor="pointer" onclick="showDetail('ac1')">
+          <!-- AC body -->
+          <polygon points="40,180 185,155 185,440 40,460" fill="url(#acGrad)" stroke="rgba(0,212,255,0.3)" stroke-width="1"/>
+          <!-- AC top highlight -->
+          <polygon points="40,180 185,155 185,165 40,192" fill="rgba(0,212,255,0.08)"/>
+          <!-- AC vent slats -->
+          <g opacity="0.6">
+            <polygon points="50,205 175,183 175,188 50,210" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,218 175,196 175,201 50,223" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,231 175,209 175,214 50,236" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,244 175,222 175,227 50,249" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,257 175,235 175,240 50,262" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,270 175,248 175,253 50,275" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,283 175,261 175,266 50,288" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,296 175,274 175,279 50,301" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,309 175,287 175,292 50,314" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,322 175,300 175,305 50,327" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,335 175,313 175,318 50,340" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,348 175,326 175,331 50,353" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,361 175,339 175,344 50,366" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,374 175,352 175,357 50,379" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,387 175,365 175,370 50,392" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="50,400 175,378 175,383 50,405" fill="rgba(0,212,255,0.12)"/>
+          </g>
+          <!-- AC status LED -->
+          <circle cx="170" cy="165" r="5" fill="#00d4ff" filter="url(#glow3)">
+            <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <!-- Cold air arrows from AC -->
+          <path d="M185,250 L220,248" stroke="rgba(0,212,255,0.5)" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrC)"/>
+          <path d="M185,290 L220,288" stroke="rgba(0,212,255,0.5)" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrC)"/>
+          <path d="M185,330 L220,328" stroke="rgba(0,212,255,0.5)" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrC)"/>
+          <!-- AC label -->
+          <text x="112" y="430" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="10" fill="rgba(0,212,255,0.7)" transform="skewX(-3)">CRAC-1</text>
+          <text x="112" y="445" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(0,212,255,0.4)" transform="skewX(-3)">18°C · 1200 CFM</text>
+        </g>
+
+        <!-- ══ AC UNIT RIGHT WALL ══ -->
+        <g cursor="pointer" onclick="showDetail('ac2')">
+          <polygon points="960,190 815,165 815,445 960,470" fill="url(#acGrad)" stroke="rgba(0,212,255,0.3)" stroke-width="1"/>
+          <polygon points="960,190 815,165 815,175 960,202" fill="rgba(0,212,255,0.08)"/>
+          <g opacity="0.6">
+            <polygon points="825,188 950,210 950,215 825,193" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,201 950,223 950,228 825,206" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,214 950,236 950,241 825,219" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,227 950,249 950,254 825,232" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,240 950,262 950,267 825,245" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,253 950,275 950,280 825,258" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,266 950,288 950,293 825,271" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,279 950,301 950,306 825,284" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,292 950,314 950,319 825,297" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,305 950,327 950,332 825,310" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,318 950,340 950,345 825,323" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,331 950,353 950,358 825,336" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,344 950,366 950,371 825,349" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,357 950,379 950,384 825,362" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,370 950,392 950,397 825,375" fill="rgba(0,212,255,0.12)"/>
+            <polygon points="825,383 950,405 950,410 825,388" fill="rgba(0,212,255,0.12)"/>
+          </g>
+          <!-- Cold air from right AC -->
+          <path d="M815,260 L780,258" stroke="rgba(0,212,255,0.5)" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrC)" transform="rotate(180,797,259)"/>
+          <path d="M815,300 L780,298" stroke="rgba(0,212,255,0.5)" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrC)" transform="rotate(180,797,299)"/>
+          <circle cx="830" cy="176" r="5" fill="#00d4ff" filter="url(#glow3)">
+            <animate attributeName="opacity" values="1;0.4;1" dur="2.4s" repeatCount="indefinite"/>
+          </circle>
+          <text x="887" y="435" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="10" fill="rgba(0,212,255,0.7)" transform="skewX(3)">CRAC-2</text>
+          <text x="887" y="450" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(0,212,255,0.4)" transform="skewX(3)">18°C · 1200 CFM</text>
+        </g>
+
+        <!-- ══ RACK ROW — LEFT GROUP ══ -->
+        <!-- RACK 1 — HP ProLiant A1 -->
+        <g cursor="pointer" onclick="showDetail('rackA1')">
+          <!-- Rack body -->
+          <polygon points="230,145 350,145 350,560 230,560" fill="url(#rackGrad)" stroke="rgba(0,212,255,0.35)" stroke-width="1"/>
+          <!-- Rack top -->
+          <polygon points="230,145 350,145 360,135 240,135" fill="url(#rackTop)" stroke="rgba(0,212,255,0.25)" stroke-width="0.5"/>
+          <!-- Rack left side -->
+          <polygon points="230,145 240,135 240,550 230,560" fill="#060e18" stroke="rgba(0,212,255,0.15)" stroke-width="0.5"/>
+          <!-- Front panel details -->
+          <!-- Server units inside rack -->
+          <rect x="238" y="158" width="104" height="14" rx="1" fill="#0a1826" stroke="rgba(0,212,255,0.2)" stroke-width="0.5"/>
+          <rect x="240" y="160" width="60" height="10" rx="1" fill="#0d2030"/>
+          <circle cx="332" cy="165" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite"/></circle>
+          <circle cx="340" cy="165" r="3" fill="#00d4ff" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.2s" repeatCount="indefinite"/></circle>
+
+          <rect x="238" y="175" width="104" height="14" rx="1" fill="#0a1826" stroke="rgba(0,212,255,0.2)" stroke-width="0.5"/>
+          <rect x="240" y="177" width="60" height="10" rx="1" fill="#0d2030"/>
+          <circle cx="332" cy="182" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.0s" repeatCount="indefinite"/></circle>
+
+          <rect x="238" y="192" width="104" height="28" rx="1" fill="#0a1826" stroke="rgba(0,212,255,0.25)" stroke-width="0.5"/>
+          <rect x="240" y="194" width="70" height="24" rx="1" fill="#0d2030"/>
+          <rect x="244" y="197" width="10" height="8" rx="1" fill="#1a2a3a"/>
+          <rect x="256" y="197" width="10" height="8" rx="1" fill="#1a2a3a"/>
+          <rect x="268" y="197" width="10" height="8" rx="1" fill="#112211"/>
+          <circle cx="332" cy="208" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/></circle>
+          <circle cx="340" cy="208" r="3" fill="#ffaa00" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="0.7s" repeatCount="indefinite"/></circle>
+
+          <rect x="238" y="223" width="104" height="28" rx="1" fill="#0a1826" stroke="rgba(0,212,255,0.25)" stroke-width="0.5"/>
+          <rect x="240" y="225" width="70" height="24" rx="1" fill="#0d2030"/>
+          <rect x="244" y="228" width="10" height="8" rx="1" fill="#1a2a3a"/>
+          <rect x="256" y="228" width="10" height="8" rx="1" fill="#112211"/>
+          <rect x="268" y="228" width="10" height="8" rx="1" fill="#112211"/>
+          <circle cx="332" cy="239" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.1s" repeatCount="indefinite"/></circle>
+
+          <!-- Blank panels -->
+          <rect x="238" y="254" width="104" height="8" rx="1" fill="#060e18" stroke="rgba(0,212,255,0.08)" stroke-width="0.5"/>
+          <rect x="238" y="265" width="104" height="8" rx="1" fill="#060e18" stroke="rgba(0,212,255,0.08)" stroke-width="0.5"/>
+
+          <!-- KVM switch -->
+          <rect x="238" y="276" width="104" height="14" rx="1" fill="#121a00" stroke="rgba(255,170,0,0.3)" stroke-width="0.5"/>
+          <circle cx="244" cy="283" r="2" fill="#ffaa00"><animate attributeName="opacity" values="1;0.2;1" dur="0.5s" repeatCount="indefinite"/></circle>
+          <circle cx="250" cy="283" r="2" fill="#ffaa00"><animate attributeName="opacity" values="1;0.2;1" dur="0.6s" repeatCount="indefinite"/></circle>
+          <circle cx="256" cy="283" r="2" fill="#00ff88"><animate attributeName="opacity" values="1;0.2;1" dur="0.8s" repeatCount="indefinite"/></circle>
+
+          <!-- UPS -->
+          <rect x="238" y="480" width="104" height="50" rx="1" fill="#120808" stroke="rgba(255,68,102,0.3)" stroke-width="0.5"/>
+          <rect x="242" y="488" width="70" height="6" rx="1" fill="rgba(255,255,255,0.04)" stroke="rgba(255,68,102,0.2)" stroke-width="0.5"/>
+          <rect x="243" y="489" width="56" height="4" rx="1" fill="#00ff88" opacity="0.7"/>
+          <text x="292" y="510" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(255,68,102,0.7)">UPS 3000VA</text>
+          <text x="292" y="522" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="rgba(0,255,136,0.6)">80% ● CHARGED</text>
+
+          <!-- PDU -->
+          <rect x="238" y="533" width="104" height="20" rx="1" fill="#0a1020" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/>
+          <circle cx="248" cy="543" r="3" fill="none" stroke="rgba(100,116,139,0.4)" stroke-width="0.7"/>
+          <circle cx="258" cy="543" r="3" fill="none" stroke="rgba(100,116,139,0.4)" stroke-width="0.7"/>
+          <circle cx="268" cy="543" r="3" fill="none" stroke="rgba(100,116,139,0.4)" stroke-width="0.7"/>
+          <circle cx="278" cy="543" r="3" fill="#00ff88" opacity="0.5"/>
+
+          <!-- Rack label -->
+          <text x="292" y="548" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="9" fill="rgba(0,212,255,0.6)">RACK A1</text>
+          <!-- Rack glow -->
+          <rect x="230" y="145" width="120" height="415" rx="0" fill="none" stroke="rgba(0,212,255,0.05)" stroke-width="20"/>
+        </g>
+
+        <!-- RACK 2 — HP ProLiant A2 -->
+        <g cursor="pointer" onclick="showDetail('rackA2')">
+          <polygon points="358,145 478,145 478,560 358,560" fill="url(#rackGrad)" stroke="rgba(0,212,255,0.35)" stroke-width="1"/>
+          <polygon points="358,145 478,145 488,135 368,135" fill="url(#rackTop)" stroke="rgba(0,212,255,0.25)" stroke-width="0.5"/>
+          <polygon points="358,145 368,135 368,550 358,560" fill="#060e18" stroke="rgba(0,212,255,0.15)" stroke-width="0.5"/>
+
+          <rect x="366" y="158" width="104" height="14" rx="1" fill="#0a1826" stroke="rgba(0,212,255,0.2)" stroke-width="0.5"/>
+          <rect x="368" y="160" width="60" height="10" rx="1" fill="#0d2030"/>
+          <circle cx="460" cy="165" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="1.9s" repeatCount="indefinite"/></circle>
+
+          <rect x="366" y="175" width="104" height="28" rx="1" fill="#0a1826" stroke="rgba(0,212,255,0.25)" stroke-width="0.5"/>
+          <rect x="368" y="177" width="70" height="24" rx="1" fill="#0d2030"/>
+          <rect x="372" y="180" width="10" height="8" rx="1" fill="#1a2a3a"/>
+          <rect x="384" y="180" width="10" height="8" rx="1" fill="#1a2a3a"/>
+          <rect x="396" y="180" width="10" height="8" rx="1" fill="#112211"/>
+          <circle cx="460" cy="191" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.3s" repeatCount="indefinite"/></circle>
+          <circle cx="452" cy="191" r="3" fill="#00d4ff" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="1.7s" repeatCount="indefinite"/></circle>
+
+          <rect x="366" y="206" width="104" height="28" rx="1" fill="#0a1826" stroke="rgba(0,212,255,0.25)" stroke-width="0.5"/>
+          <rect x="368" y="208" width="70" height="24" rx="1" fill="#0d2030"/>
+          <rect x="372" y="211" width="10" height="8" rx="1" fill="#1a2a3a"/>
+          <rect x="384" y="211" width="10" height="8" rx="1" fill="#112211"/>
+          <rect x="396" y="211" width="10" height="8" rx="1" fill="#112211"/>
+          <circle cx="460" cy="222" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.0s" repeatCount="indefinite"/></circle>
+
+          <rect x="366" y="237" width="104" height="14" rx="1" fill="#0a1826" stroke="rgba(0,212,255,0.2)" stroke-width="0.5"/>
+          <rect x="368" y="239" width="60" height="10" rx="1" fill="#0d2030"/>
+          <circle cx="460" cy="246" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/></circle>
+
+          <rect x="366" y="254" width="104" height="8" rx="1" fill="#060e18" stroke="rgba(0,212,255,0.08)" stroke-width="0.5"/>
+          <rect x="366" y="265" width="104" height="8" rx="1" fill="#060e18" stroke="rgba(0,212,255,0.08)" stroke-width="0.5"/>
+
+          <!-- IBM label -->
+          <rect x="366" y="276" width="104" height="14" rx="1" fill="#0a0a1a" stroke="rgba(176,106,255,0.3)" stroke-width="0.5"/>
+          <text x="418" y="286" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(176,106,255,0.7)">IBM · Active</text>
+          <circle cx="462" cy="283" r="3" fill="#aa66ff" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.5s" repeatCount="indefinite"/></circle>
+
+          <rect x="366" y="480" width="104" height="50" rx="1" fill="#120808" stroke="rgba(255,68,102,0.3)" stroke-width="0.5"/>
+          <rect x="370" y="488" width="70" height="6" rx="1" fill="rgba(255,255,255,0.04)" stroke="rgba(255,68,102,0.2)" stroke-width="0.5"/>
+          <rect x="371" y="489" width="44" height="4" rx="1" fill="#00ff88" opacity="0.7"/>
+          <text x="420" y="510" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(255,68,102,0.7)">UPS 2000VA</text>
+          <text x="420" y="522" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="rgba(0,255,136,0.6)">62% ● OK</text>
+
+          <text x="420" y="548" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="9" fill="rgba(0,212,255,0.6)">RACK A2</text>
+        </g>
+
+        <!-- ══ RACK ROW — CENTER/RIGHT GROUP ══ -->
+        <!-- RACK 3 — Storage/IBM -->
+        <g cursor="pointer" onclick="showDetail('rackB1')">
+          <polygon points="522,148 642,148 642,562 522,562" fill="url(#rackGrad)" stroke="rgba(176,106,255,0.35)" stroke-width="1"/>
+          <polygon points="522,148 642,148 652,138 532,138" fill="url(#rackTop)" stroke="rgba(176,106,255,0.25)" stroke-width="0.5"/>
+          <polygon points="522,148 532,138 532,552 522,562" fill="#060e18" stroke="rgba(176,106,255,0.15)" stroke-width="0.5"/>
+
+          <!-- IBM server rows -->
+          <rect x="530" y="160" width="104" height="14" rx="1" fill="#0a0a1a" stroke="rgba(176,106,255,0.25)" stroke-width="0.5"/>
+          <rect x="532" y="162" width="8" height="8" rx="1" fill="#1a1a2e"/>
+          <rect x="542" y="162" width="8" height="8" rx="1" fill="#1a1a2e"/>
+          <rect x="552" y="162" width="8" height="8" rx="1" fill="#1a1a2e"/>
+          <rect x="562" y="162" width="8" height="8" rx="1" fill="#1a1a2e"/>
+          <circle cx="626" cy="167" r="3" fill="#aa66ff" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.2s" repeatCount="indefinite"/></circle>
+          <text x="620" y="170" text-anchor="end" font-family="'Share Tech Mono',monospace" font-size="6" fill="rgba(176,106,255,0.6)">IBM</text>
+
+          <rect x="530" y="177" width="104" height="14" rx="1" fill="#0a0a1a" stroke="rgba(176,106,255,0.25)" stroke-width="0.5"/>
+          <rect x="532" y="179" width="8" height="8" rx="1" fill="#1a1a2e"/>
+          <rect x="542" y="179" width="8" height="8" rx="1" fill="#1a1a2e"/>
+          <rect x="552" y="179" width="8" height="8" rx="1" fill="#221a00"/>
+          <circle cx="626" cy="184" r="3" fill="#ffaa00" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite"/></circle>
+          <text x="620" y="187" text-anchor="end" font-family="'Share Tech Mono',monospace" font-size="6" fill="rgba(176,106,255,0.6)">IBM</text>
+
+          <rect x="530" y="194" width="104" height="14" rx="1" fill="#0a0a1a" stroke="rgba(0,212,255,0.2)" stroke-width="0.5"/>
+          <circle cx="626" cy="201" r="3" fill="#00d4ff" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.6s" repeatCount="indefinite"/></circle>
+
+          <!-- NAS storage unit -->
+          <rect x="530" y="211" width="104" height="28" rx="1" fill="#0a1826" stroke="rgba(0,212,255,0.2)" stroke-width="0.5"/>
+          <rect x="532" y="213" width="14" height="12" rx="1" fill="#1a2a3a"/>
+          <rect x="548" y="213" width="14" height="12" rx="1" fill="#1a2a3a"/>
+          <rect x="564" y="213" width="14" height="12" rx="1" fill="#112211"/>
+          <rect x="580" y="213" width="14" height="12" rx="1" fill="#112211"/>
+          <circle cx="622" cy="225" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite"/></circle>
+
+          <!-- Patch panel -->
+          <rect x="530" y="242" width="104" height="10" rx="1" fill="#0d1826" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/>
+          <rect x="533" y="245" width="5" height="4" rx="0.5" fill="#22c55e" opacity="0.6"/>
+          <rect x="540" y="245" width="5" height="4" rx="0.5" fill="#3b82f6" opacity="0.6"/>
+          <rect x="547" y="245" width="5" height="4" rx="0.5" fill="#f59e0b" opacity="0.6"/>
+          <rect x="554" y="245" width="5" height="4" rx="0.5" fill="#22c55e" opacity="0.6"/>
+          <rect x="561" y="245" width="5" height="4" rx="0.5" fill="rgba(255,255,255,0.1)"/>
+          <rect x="568" y="245" width="5" height="4" rx="0.5" fill="#3b82f6" opacity="0.6"/>
+
+          <!-- Core switch -->
+          <rect x="530" y="255" width="104" height="14" rx="1" fill="#001428" stroke="rgba(0,212,255,0.3)" stroke-width="0.5"/>
+          <g opacity="0.7">
+            <rect x="533" y="259" width="4" height="6" rx="0.5" fill="#00d4ff"/>
+            <rect x="539" y="259" width="4" height="6" rx="0.5" fill="#00d4ff"/>
+            <rect x="545" y="259" width="4" height="6" rx="0.5" fill="#00d4ff"/>
+            <rect x="551" y="259" width="4" height="6" rx="0.5" fill="#00ff88"/>
+            <rect x="557" y="259" width="4" height="6" rx="0.5" fill="#00ff88"/>
+            <rect x="563" y="259" width="4" height="6" rx="0.5" fill="rgba(255,255,255,0.1)"/>
+          </g>
+          <circle cx="626" cy="262" r="3" fill="#00d4ff" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="1.2s" repeatCount="indefinite"/></circle>
+
+          <!-- KVM monitor placeholder -->
+          <rect x="530" y="430" width="104" height="40" rx="2" fill="#00008a" stroke="rgba(0,100,255,0.4)" stroke-width="0.5"/>
+          <text x="582" y="448" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="#8899ff">ENTER NAME AND</text>
+          <text x="582" y="459" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="#8899ff">PASSWORD:</text>
+          <circle cx="626" cy="438" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.4;1" dur="3s" repeatCount="indefinite"/></circle>
+
+          <rect x="530" y="480" width="104" height="60" rx="1" fill="#120808" stroke="rgba(255,68,102,0.3)" stroke-width="0.5"/>
+          <rect x="534" y="490" width="80" height="6" rx="1" fill="rgba(255,255,255,0.04)" stroke="rgba(255,68,102,0.2)" stroke-width="0.5"/>
+          <rect x="535" y="491" width="64" height="4" rx="1" fill="#00ff88" opacity="0.7"/>
+          <text x="582" y="510" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(255,68,102,0.7)">UPS 3000VA</text>
+          <text x="582" y="525" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="rgba(0,255,136,0.6)">80% ● CHARGED</text>
+
+          <text x="582" y="550" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="9" fill="rgba(176,106,255,0.6)">RACK B1</text>
+        </g>
+
+        <!-- RACK 4 — Monitoring/Management -->
+        <g cursor="pointer" onclick="showDetail('rackB2')">
+          <polygon points="650,148 770,148 770,562 650,562" fill="url(#rackGrad)" stroke="rgba(0,255,136,0.3)" stroke-width="1"/>
+          <polygon points="650,148 770,148 780,138 660,138" fill="url(#rackTop)" stroke="rgba(0,255,136,0.2)" stroke-width="0.5"/>
+          <polygon points="650,148 660,138 660,552 650,562" fill="#060e18" stroke="rgba(0,255,136,0.1)" stroke-width="0.5"/>
+
+          <rect x="658" y="160" width="104" height="14" rx="1" fill="#0a1826" stroke="rgba(0,255,136,0.2)" stroke-width="0.5"/>
+          <rect x="660" y="162" width="60" height="10" rx="1" fill="#0d2030"/>
+          <circle cx="754" cy="167" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.4s" repeatCount="indefinite"/></circle>
+
+          <rect x="658" y="177" width="104" height="28" rx="1" fill="#0a1826" stroke="rgba(0,255,136,0.2)" stroke-width="0.5"/>
+          <rect x="660" y="179" width="70" height="24" rx="1" fill="#0d2030"/>
+          <rect x="664" y="182" width="10" height="8" rx="1" fill="#1a2a3a"/>
+          <rect x="676" y="182" width="10" height="8" rx="1" fill="#112211"/>
+          <rect x="688" y="182" width="10" height="8" rx="1" fill="#112211"/>
+          <circle cx="754" cy="191" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="1.7s" repeatCount="indefinite"/></circle>
+
+          <!-- Monitoring server -->
+          <rect x="658" y="208" width="104" height="14" rx="1" fill="#001a10" stroke="rgba(0,255,136,0.25)" stroke-width="0.5"/>
+          <text x="712" y="218" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="rgba(0,255,136,0.6)">MONITORING</text>
+          <circle cx="754" cy="215" r="3" fill="#00ff88" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.3;1" dur="2.8s" repeatCount="indefinite"/></circle>
+
+          <rect x="658" y="225" width="104" height="14" rx="1" fill="#060e18" stroke="rgba(0,212,255,0.1)" stroke-width="0.5"/>
+          <rect x="658" y="242" width="104" height="8" rx="1" fill="#060e18" stroke="rgba(0,212,255,0.06)" stroke-width="0.5"/>
+
+          <!-- Router -->
+          <rect x="658" y="253" width="104" height="14" rx="1" fill="#001428" stroke="rgba(0,212,255,0.25)" stroke-width="0.5"/>
+          <text x="712" y="263" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="rgba(0,212,255,0.6)">ROUTER · ISP</text>
+          <circle cx="754" cy="260" r="3" fill="#ffaa00" filter="url(#glow3)"><animate attributeName="opacity" values="1;0.2;1" dur="0.6s" repeatCount="indefinite"/></circle>
+
+          <rect x="658" y="480" width="104" height="50" rx="1" fill="#120808" stroke="rgba(255,68,102,0.3)" stroke-width="0.5"/>
+          <rect x="662" y="488" width="60" height="6" rx="1" fill="rgba(255,255,255,0.04)" stroke="rgba(255,68,102,0.2)" stroke-width="0.5"/>
+          <rect x="663" y="489" width="48" height="4" rx="1" fill="#00ff88" opacity="0.7"/>
+          <text x="712" y="510" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(255,68,102,0.7)">UPS 1500VA</text>
+          <text x="712" y="522" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="rgba(0,255,136,0.6)">75% ● OK</text>
+
+          <text x="712" y="548" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="9" fill="rgba(0,255,136,0.5)">RACK B2</text>
+        </g>
+
+        <!-- ══ TEMPERATURE SENSOR ══ -->
+        <!-- Temp display on back wall -->
+        <rect x="495" y="140" width="80" height="30" rx="4" fill="#020810" stroke="rgba(0,212,255,0.3)" stroke-width="0.5"/>
+        <text x="535" y="152" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(0,212,255,0.5)">ROOM TEMP</text>
+        <text x="535" y="165" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="11" fill="#00d4ff" id="svgTemp">22.4°C</text>
+
+        <!-- ══ FIRE SUPPRESSION NOZZLES ══ -->
+        <!-- Ceiling nozzles -->
+        <g filter="url(#glow3)">
+          <circle cx="350" cy="133" r="4" fill="#cc2233" stroke="#ff4466" stroke-width="0.5"/>
+          <circle cx="500" cy="133" r="4" fill="#cc2233" stroke="#ff4466" stroke-width="0.5"/>
+          <circle cx="650" cy="133" r="4" fill="#cc2233" stroke="#ff4466" stroke-width="0.5"/>
+        </g>
+        <!-- Nozzle stems -->
+        <line x1="350" y1="130" x2="350" y2="137" stroke="#ff4466" stroke-width="1"/>
+        <line x1="500" y1="130" x2="500" y2="137" stroke="#ff4466" stroke-width="1"/>
+        <line x1="650" y1="130" x2="650" y2="137" stroke="#ff4466" stroke-width="1"/>
+
+        <!-- ══ DOOR ══ -->
+        <g cursor="pointer" onclick="showDetail('door')">
+          <!-- Door frame -->
+          <polygon points="400,580 470,580 470,370 400,370" fill="#06101a" stroke="rgba(0,212,255,0.3)" stroke-width="1"/>
+          <!-- Door panels -->
+          <rect x="404" y="374" width="62" height="96" rx="1" fill="#04080e" stroke="rgba(0,212,255,0.15)" stroke-width="0.5"/>
+          <rect x="404" y="478" width="62" height="96" rx="1" fill="#04080e" stroke="rgba(0,212,255,0.15)" stroke-width="0.5"/>
+          <!-- Door handle -->
+          <rect x="456" y="476" width="4" height="16" rx="2" fill="#1a3a5a"/>
+          <!-- Access card reader -->
+          <rect x="474" y="460" width="18" height="28" rx="3" fill="#0a1826" stroke="rgba(0,212,255,0.4)" stroke-width="0.5"/>
+          <circle cx="483" cy="468" r="4" fill="#00d4ff" opacity="0.6">
+            <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <rect x="477" y="476" width="12" height="8" rx="1" fill="rgba(0,212,255,0.1)"/>
+          <!-- Door CCTV indicator -->
+          <text x="435" y="540" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="rgba(0,212,255,0.4)">SECURE</text>
+          <text x="435" y="550" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="rgba(0,212,255,0.4)">ENTRY</text>
+        </g>
+
+        <!-- ══ CCTV CAMERAS ══ -->
+        <!-- Top left CCTV -->
+        <g cursor="pointer" onclick="showDetail('cctv')">
+          <rect x="204" y="134" width="18" height="12" rx="2" fill="#0a1826" stroke="rgba(255,170,0,0.4)" stroke-width="0.5"/>
+          <circle cx="207" cy="140" r="3" fill="#111" stroke="rgba(255,170,0,0.5)" stroke-width="0.5"/>
+          <circle cx="207" cy="140" r="1.5" fill="#1a1a1a"/>
+          <circle cx="218" cy="136" r="2" fill="#ff4466">
+            <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+        <!-- Top right CCTV -->
+        <g cursor="pointer" onclick="showDetail('cctv')">
+          <rect x="778" y="134" width="18" height="12" rx="2" fill="#0a1826" stroke="rgba(255,170,0,0.4)" stroke-width="0.5"/>
+          <circle cx="793" cy="140" r="3" fill="#111" stroke="rgba(255,170,0,0.5)" stroke-width="0.5"/>
+          <circle cx="793" cy="140" r="1.5" fill="#1a1a1a"/>
+          <circle cx="782" cy="136" r="2" fill="#ff4466">
+            <animate attributeName="opacity" values="1;0.2;1" dur="2.5s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+
+        <!-- ══ COLD AIR FLOW VISUALIZATION ══ -->
+        <!-- Cold air pathways -->
+        <path d="M 195 260 Q 225 258 250 270" stroke="rgba(0,212,255,0.15)" stroke-width="8" fill="none"/>
+        <path d="M 195 300 Q 225 298 250 310" stroke="rgba(0,212,255,0.12)" stroke-width="6" fill="none"/>
+        <path d="M 805 270 Q 785 268 770 280" stroke="rgba(0,212,255,0.15)" stroke-width="8" fill="none"/>
+        <!-- Hot air rising (back of racks) -->
+        <path d="M 340 148 Q 340 138 350 133" stroke="rgba(255,100,50,0.15)" stroke-width="4" fill="none" stroke-dasharray="3 3"/>
+        <path d="M 470 148 Q 470 138 490 133" stroke="rgba(255,100,50,0.12)" stroke-width="3" fill="none" stroke-dasharray="3 3"/>
+        <path d="M 640 148 Q 640 138 650 133" stroke="rgba(255,100,50,0.12)" stroke-width="3" fill="none" stroke-dasharray="3 3"/>
+
+        <!-- ══ GROUNDING STRIP ══ -->
+        <rect x="200" y="576" width="600" height="4" rx="1" fill="#1a2830" stroke="rgba(0,212,255,0.15)" stroke-width="0.5"/>
+        <text x="500" y="579" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="6" fill="rgba(0,212,255,0.3)">⏚ GROUND</text>
+
+        <!-- ══ AMBIENT GLOW EFFECTS ══ -->
+        <!-- Rack glow on floor -->
+        <ellipse cx="295" cy="578" rx="65" ry="4" fill="rgba(0,212,255,0.06)"/>
+        <ellipse cx="422" cy="578" rx="65" ry="4" fill="rgba(0,212,255,0.06)"/>
+        <ellipse cx="582" cy="578" rx="65" ry="4" fill="rgba(176,106,255,0.05)"/>
+        <ellipse cx="710" cy="578" rx="65" ry="4" fill="rgba(0,255,136,0.04)"/>
+        <!-- Ceiling light reflection on floor -->
+        <ellipse cx="350" cy="590" rx="80" ry="8" fill="rgba(200,230,255,0.04)"/>
+        <ellipse cx="650" cy="590" rx="80" ry="8" fill="rgba(200,230,255,0.03)"/>
+
+      </svg>
+
+      <!-- FLOATING LABELS -->
+      <div class="label-overlay">
+        <!-- AC labels -->
+        <div class="lbl lbl-green" style="left:2%;top:38%" onclick="showDetail('ac1')">
+          <div class="lbl-dot" style="background:#00ff88"></div>CRAC-1 · 18°C
+        </div>
+        <div class="lbl lbl-green" style="right:2%;top:40%" onclick="showDetail('ac2')">
+          <div class="lbl-dot" style="background:#00ff88"></div>CRAC-2 · 18°C
+        </div>
+        <!-- Rack labels -->
+        <div class="lbl" style="left:22%;top:12%" onclick="showDetail('rackA1')">
+          <div class="lbl-dot" style="background:#00d4ff"></div>HP ProLiant A1
+        </div>
+        <div class="lbl" style="left:38%;top:12%" onclick="showDetail('rackA2')">
+          <div class="lbl-dot" style="background:#00d4ff"></div>HP ProLiant A2
+        </div>
+        <div class="lbl lbl-amber" style="left:54%;top:12%" onclick="showDetail('rackB1')">
+          <div class="lbl-dot" style="background:#aa66ff"></div>IBM · B1
+        </div>
+        <div class="lbl lbl-green" style="left:68%;top:12%" onclick="showDetail('rackB2')">
+          <div class="lbl-dot" style="background:#00ff88"></div>Monitoring B2
+        </div>
+        <!-- Ceiling lights -->
+        <div class="lbl" style="left:28%;top:19%" onclick="showDetail('light')">
+          <div class="lbl-dot" style="background:#c0e0ff"></div>LED Panel
+        </div>
+        <div class="lbl" style="left:58%;top:19%" onclick="showDetail('light')">
+          <div class="lbl-dot" style="background:#c0e0ff"></div>LED Panel
+        </div>
+        <!-- Fire suppression -->
+        <div class="lbl lbl-red" style="left:48%;top:16%" onclick="showDetail('fire')">
+          <div class="lbl-dot" style="background:#ff4466"></div>Fire Suppression
+        </div>
+        <!-- Temperature -->
+        <div class="lbl" style="left:44%;top:22%" onclick="showDetail('temp')">
+          <div class="lbl-dot" style="background:#00d4ff"></div>22.4°C OK
+        </div>
+        <!-- UPS -->
+        <div class="lbl lbl-amber" style="left:22%;top:80%" onclick="showDetail('ups')">
+          <div class="lbl-dot" style="background:#ff4466"></div>UPS · 80%
+        </div>
+        <!-- Door -->
+        <div class="lbl" style="left:44%;top:64%" onclick="showDetail('door')">
+          <div class="lbl-dot" style="background:#00d4ff"></div>Secure Entry
+        </div>
+        <!-- Cable tray ceiling -->
+        <div class="lbl" style="left:30%;top:5%" onclick="showDetail('cabletray')">
+          <div class="lbl-dot" style="background:#e11d48"></div>Cable Tray
+        </div>
+        <!-- Raised floor -->
+        <div class="lbl" style="left:40%;top:95%" onclick="showDetail('raisedfloor')">
+          <div class="lbl-dot" style="background:#1a3a5a"></div>Raised Floor
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO BAR -->
+    <div class="info-panel">
+      <div class="info-stat">
+        <div class="info-stat-val" style="color:#00d4ff" id="infoTemp">22.4°C</div>
+        <div class="info-stat-label">ROOM TEMP</div>
+      </div>
+      <div class="info-stat">
+        <div class="info-stat-val" style="color:#aa66ff">48%</div>
+        <div class="info-stat-label">HUMIDITY</div>
+      </div>
+      <div class="info-stat">
+        <div class="info-stat-val" style="color:#00ff88">4/4</div>
+        <div class="info-stat-label">RACKS ONLINE</div>
+      </div>
+      <div class="info-stat">
+        <div class="info-stat-val" style="color:#ffaa00">3.2kW</div>
+        <div class="info-stat-label">POWER LOAD</div>
+      </div>
+      <div class="info-stat">
+        <div class="info-stat-val" style="color:#00ff88">2/2</div>
+        <div class="info-stat-label">CRAC ACTIVE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM PANELS -->
+  <div class="bottom-grid">
+
+    <!-- TEMP & ENVIRONMENT -->
+    <div class="b-card">
+      <div class="b-card-head">
+        <div class="b-card-title">ENVIRONMENT</div>
+        <div style="font-size:9px;color:#00ff88">● NOMINAL</div>
+      </div>
+      <div class="b-card-body">
+        <div class="gauge-wrap">
+          <div class="gauge-item">
+            <div class="gauge-val" style="color:#00d4ff" id="gaugeTemp">22.4<span style="font-size:12px">°C</span></div>
+            <div class="gauge-bar-h"><div class="gauge-bar-fill" style="background:#00d4ff;width:55%"></div></div>
+            <div class="gauge-label" style="margin-top:4px">TEMPERATURE</div>
+          </div>
+          <div style="width:1px;background:rgba(0,212,255,0.1);margin:0 12px"></div>
+          <div class="gauge-item">
+            <div class="gauge-val" style="color:#aa66ff">48<span style="font-size:12px">%</span></div>
+            <div class="gauge-bar-h"><div class="gauge-bar-fill" style="background:#aa66ff;width:48%"></div></div>
+            <div class="gauge-label" style="margin-top:4px">HUMIDITY</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;padding:5px 8px;background:#06101a;border-radius:5px;border:1px solid rgba(0,212,255,.08)">
+            <span style="color:#4a7090">Hot aisle temp</span>
+            <span style="color:#ff4466">31°C</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;padding:5px 8px;background:#06101a;border-radius:5px;border:1px solid rgba(0,212,255,.08)">
+            <span style="color:#4a7090">Cold aisle temp</span>
+            <span style="color:#00d4ff">20°C</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;padding:5px 8px;background:#06101a;border-radius:5px;border:1px solid rgba(0,212,255,.08)">
+            <span style="color:#4a7090">CRAC inlet</span>
+            <span style="color:#00ff88">18°C</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;padding:5px 8px;background:#06101a;border-radius:5px;border:1px solid rgba(0,212,255,.08)">
+            <span style="color:#4a7090">Dew point</span>
+            <span style="color:#aa66ff">12°C</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STANDAR RUANGAN SERVER -->
+    <div class="b-card">
+      <div class="b-card-head">
+        <div class="b-card-title">STANDAR RUANGAN</div>
+      </div>
+      <div class="b-card-body">
+        <div class="rule-list">
+          <div class="rule-item"><div class="rule-icon">🌡️</div>Suhu ideal <strong style="color:#00d4ff">18–27°C</strong> — terlalu panas merusak komponen, terlalu dingin kondensasi</div>
+          <div class="rule-item"><div class="rule-icon">💧</div>Humidity ideal <strong style="color:#aa66ff">40–60%</strong> — terlalu kering bikin static, terlalu lembab korosi</div>
+          <div class="rule-item"><div class="rule-icon">⏚</div><strong style="color:#ffaa00">Grounding</strong> wajib — semua perangkat harus terhubung ground untuk proteksi ESD</div>
+          <div class="rule-item"><div class="rule-icon">🔥</div><strong style="color:#ff4466">Fire suppression</strong> pakai gas (FM-200/Novec), bukan air — air merusak server</div>
+          <div class="rule-item"><div class="rule-icon">🔐</div><strong style="color:#00d4ff">Access control</strong> — kartu akses + CCTV 24/7, log setiap orang yang masuk</div>
+          <div class="rule-item"><div class="rule-icon">🏗️</div><strong style="color:#4a7090">Raised floor</strong> 30–60cm — kabel power & data lewat bawah, sirkulasi udara dingin</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="b-card">
+      <div class="b-card-head">
+        <div class="b-card-title">SYSTEM ALERTS</div>
+        <div style="font-size:9px;color:#ffaa00">1 WARNING</div>
+      </div>
+      <div class="b-card-body">
+        <div class="alert-list">
+          <div class="alert-item alert-ok">✅ &nbsp;Semua server online — 4/4 rack aktif</div>
+          <div class="alert-item alert-ok">✅ &nbsp;CRAC-1 & CRAC-2 beroperasi normal</div>
+          <div class="alert-item alert-ok">✅ &nbsp;UPS charged — 80% kapasitas tersedia</div>
+          <div class="alert-item alert-ok">✅ &nbsp;Fire suppression siap — gas terisi penuh</div>
+          <div class="alert-item alert-warn">⚠️ &nbsp;Kabel area KVM belum dirapikan — cable management needed</div>
+          <div class="alert-item alert-info">ℹ️ &nbsp;Backup otomatis terjadwal — 02:00 dini hari</div>
+          <div class="alert-item alert-info">ℹ️ &nbsp;Teknisi: Sulthan F. — login 08:12 WIB</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="text-align:center;margin-top:28px;font-size:9px;color:#1a3a5a;letter-spacing:2px">
+    LEPKOM · UNIVERSITAS GUNADARMA · SERVER ROOM INTERIOR VISUALIZATION · KLIK KOMPONEN UNTUK DETAIL
+  </div>
+
+</div><!-- end page -->
+
+<!-- DETAIL DATA -->
+<script>
+const details = {
+  ac1: { title:'CRAC Unit 1', sub:'COMPUTER ROOM AIR CONDITIONING', stats:[{l:'Suhu Inlet',v:'18°C',c:'#00d4ff'},{l:'Airflow',v:'1200 CFM',c:'#00ff88'},{l:'Status',v:'Active',c:'#00ff88'},{l:'Posisi',v:'Sisi Kiri',c:'#aa66ff'}], desc:'CRAC (Computer Room Air Conditioning) adalah AC khusus data center. Beda dari AC biasa: CRAC dirancang untuk pendinginan presisi tinggi, bisa kontrol suhu dan humidity sekaligus. Udara dingin dihembuskan dari bawah (raised floor) ke depan rak — inilah cold aisle. Udara panas dari belakang rak naik ke langit-langit dan disedot kembali ke CRAC.' },
+  ac2: { title:'CRAC Unit 2', sub:'COMPUTER ROOM AIR CONDITIONING', stats:[{l:'Suhu Inlet',v:'18°C',c:'#00d4ff'},{l:'Airflow',v:'1200 CFM',c:'#00ff88'},{l:'Status',v:'Active',c:'#00ff88'},{l:'Posisi',v:'Sisi Kanan',c:'#aa66ff'}], desc:'Unit kedua sebagai redundansi — kalau CRAC-1 mati karena maintenance atau kerusakan, CRAC-2 langsung ambil alih penuh. Kedua unit berjalan bersamaan dalam mode load-sharing untuk efisiensi energi.' },
+  rackA1: { title:'Rack A1 — HP ProLiant', sub:'WEB / VM SERVER RACK', stats:[{l:'Suhu',v:'22°C',c:'#00d4ff'},{l:'Status',v:'Online',c:'#00ff88'},{l:'Brand',v:'HP ProLiant',c:'#aa66ff'},{l:'VM Running',v:'3 VM',c:'#ffaa00'}], desc:'Rack utama berisi HP ProLiant server yang menjalankan Proxmox hypervisor. Di dalamnya ada KVM switch untuk kontrol semua server, UPS 3000VA, dan PDU. Ini server yang paling sering kamu akses sebagai teknisi LEPKOM.' },
+  rackA2: { title:'Rack A2 — HP ProLiant', sub:'DATABASE SERVER RACK', stats:[{l:'Suhu',v:'23°C',c:'#00d4ff'},{l:'Status',v:'Online',c:'#00ff88'},{l:'Brand',v:'HP ProLiant',c:'#aa66ff'},{l:'Fungsi',v:'DB Lab',c:'#ffaa00'}], desc:'Rack kedua berisi server database untuk praktikum Database for Beginner. Ada IBM server untuk auth/Active Directory. Suhu sedikit lebih tinggi dari A1 karena workload database lebih intensif ke storage.' },
+  rackB1: { title:'Rack B1 — IBM Server', sub:'STORAGE & MANAGEMENT RACK', stats:[{l:'Suhu',v:'24°C',c:'#00d4ff'},{l:'Status',v:'Online',c:'#00ff88'},{l:'Brand',v:'IBM System',c:'#aa66ff'},{l:'Monitor',v:'KVM Console',c:'#ffaa00'}], desc:'Rack IBM dengan patch panel, core switch, NAS storage, dan monitor KVM (layar biru yang kelihatan di foto). Monitor ini yang dipakai teknisi untuk login langsung ke server tanpa remote. IBM server biasanya dipakai untuk workload spesifik seperti backup atau monitoring.' },
+  rackB2: { title:'Rack B2 — Monitoring', sub:'NETWORK & MONITORING RACK', stats:[{l:'Suhu',v:'23°C',c:'#00d4ff'},{l:'Status',v:'Online',c:'#00ff88'},{l:'Isi',v:'Router+Switch',c:'#aa66ff'},{l:'Fungsi',v:'Network Mgmt',c:'#ffaa00'}], desc:'Rack monitoring berisi router ISP, core switch, dan monitoring server. Di sini semua traffic jaringan LEPKOM diatur. Router menghubungkan seluruh jaringan lab ke internet kampus.' },
+  door: { title:'Pintu Akses Ruangan', sub:'PHYSICAL SECURITY ENTRY', stats:[{l:'Tipe',v:'Access Card',c:'#00d4ff'},{l:'CCTV',v:'2 Camera',c:'#ff4466'},{l:'Log',v:'Auto Record',c:'#00ff88'},{l:'Status',v:'Locked',c:'#ffaa00'}], desc:'Pintu server room pakai kartu akses elektronik — hanya orang yang terdaftar yang bisa masuk. Setiap akses tercatat otomatis (siapa, kapan, berapa lama). CCTV merekam 24/7 dan disimpan minimal 30 hari. Ini standar keamanan fisik server room.' },
+  fire: { title:'Fire Suppression System', sub:'GAS-BASED FIRE PROTECTION', stats:[{l:'Tipe Gas',v:'FM-200',c:'#ff4466'},{l:'Nozzle',v:'3 Titik',c:'#ffaa00'},{l:'Trigger',v:'Smoke Sensor',c:'#00d4ff'},{l:'Status',v:'Ready',c:'#00ff88'}], desc:'Sistem pemadam api pakai gas FM-200 atau Novec, BUKAN air. Kalau pakai air, server langsung rusak semua. Gas FM-200 menyedot oksigen dari ruangan dalam hitungan detik sehingga api padam tanpa merusak hardware. Ada warning alarm 30 detik sebelum gas keluar supaya orang bisa keluar.' },
+  light: { title:'LED Lighting System', sub:'DATA CENTER LIGHTING', stats:[{l:'Tipe',v:'LED Panel',c:'#c0e0ff'},{l:'Lux',v:'500 lux',c:'#ffaa00'},{l:'Emergency',v:'Red LED',c:'#ff4466'},{l:'Backup',v:'Battery',c:'#00ff88'}], desc:'Pencahayaan data center harus cukup terang (minimum 200 lux) untuk teknisi bisa kerja dengan nyaman. Ada lampu emergency merah yang otomatis nyala kalau listrik mati. Kabel listrik lampu terpisah dari jaringan power server supaya tidak saling ganggu.' },
+  temp: { title:'Temperature Monitoring', sub:'ENVIRONMENT SENSOR', stats:[{l:'Suhu Ruang',v:'22.4°C',c:'#00d4ff'},{l:'Target',v:'18-27°C',c:'#00ff88'},{l:'Sensor',v:'Multi-point',c:'#aa66ff'},{l:'Alert',v:'>27°C',c:'#ff4466'}], desc:'Sensor suhu dipasang di beberapa titik: depan rak (cold aisle), belakang rak (hot aisle), dan tengah ruangan. Data dikumpulkan real-time dan dikirim ke monitoring sistem. Alert otomatis kalau suhu melebihi threshold — biasanya >27°C untuk suhu ruangan dan >35°C untuk hot aisle.' },
+  ups: { title:'UPS — Uninterruptible Power Supply', sub:'POWER BACKUP SYSTEM', stats:[{l:'Kapasitas',v:'3000VA',c:'#ff4466'},{l:'Charged',v:'80%',c:'#00ff88'},{l:'Runtime',v:'~15 menit',c:'#ffaa00'},{l:'Status',v:'Charging',c:'#00d4ff'}], desc:'UPS menjaga server tetap nyala saat listrik PLN mati tiba-tiba. Kapasitas 3000VA bisa menahan beban sekitar 15 menit — cukup waktu untuk generator menyala dan mengambil alih, atau untuk shutdown server secara graceful supaya data tidak korup.' },
+  cabletray: { title:'Cable Tray — Langit-langit', sub:'OVERHEAD CABLE MANAGEMENT', stats:[{l:'Posisi',v:'Langit-langit',c:'#e11d48'},{l:'Isi',v:'Power + Data',c:'#3b82f6'},{l:'Warna',v:'Kode per jenis',c:'#22c55e'},{l:'Material',v:'Galvanized',c:'#4a7090'}], desc:'Cable tray di langit-langit membawa kabel power (merah) dan kabel data (biru/hijau) terpisah. Pemisahan ini penting untuk mencegah interferensi elektromagnetik antara kabel listrik dan kabel data. Warna kabel dikode: merah=power, biru=data, hijau=jaringan.' },
+  raisedfloor: { title:'Raised Floor', sub:'UNDER-FLOOR INFRASTRUCTURE', stats:[{l:'Tinggi',v:'30–60 cm',c:'#1a3a5a'},{l:'Fungsi',v:'Kabel + Udara',c:'#00d4ff'},{l:'Material',v:'Anti-static',c:'#00ff88'},{l:'Beban Max',v:'1000 kg/m²',c:'#ffaa00'}], desc:'Raised floor (lantai ganda) adalah lantai yang ditinggikan 30–60 cm dari lantai asli. Ruang di bawahnya dipakai untuk kabel power dan data, plus jalur udara dingin dari CRAC ke depan rak. Ini bikin ruangan lebih rapi dan memudahkan perubahan layout tanpa bongkar kabel.' },
+  cctv: { title:'CCTV Security Camera', sub:'24/7 SURVEILLANCE SYSTEM', stats:[{l:'Jumlah',v:'4 Kamera',c:'#ffaa00'},{l:'Resolusi',v:'4K',c:'#00d4ff'},{l:'Penyimpanan',v:'30 hari',c:'#00ff88'},{l:'Status',v:'Recording',c:'#ff4466'}], desc:'Kamera CCTV dipasang di setiap sudut ruangan server — minimal 4 kamera untuk coverage 360°. Rekaman disimpan selama 30 hari dan bisa diakses oleh tim keamanan. Setiap pergerakan di dalam ruangan terpantau, termasuk siapa yang menyentuh rack mana.' },
+};
+
+function showDetail(id) {
+  const d = details[id]; if (!d) return;
+  document.getElementById('dTitle').textContent = d.title;
+  document.getElementById('dSub').textContent = d.sub;
+  document.getElementById('dDesc').textContent = d.desc;
+  document.getElementById('dGrid').innerHTML = d.stats.map(s=>`
+    <div class="detail-item">
+      <div class="detail-item-label">${s.l}</div>
+      <div class="detail-item-val" style="color:${s.c}">${s.v}</div>
+    </div>`).join('');
+  document.getElementById('detailCard').classList.add('show');
+  document.getElementById('overlay').classList.add('show');
+}
+function closeDetail() {
+  document.getElementById('detailCard').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// Loader
+window.addEventListener('load', () => {
+  setTimeout(() => document.getElementById('loader').classList.add('out'), 2500);
+});
+
+// Clock
+function tick() {
+  const t = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tick, 1000);
+
+// Live temp simulation
+setInterval(() => {
+  const t = (22.4 + (Math.random()-.5)*.5).toFixed(1);
+  const el = document.getElementById('infoTemp');
+  const el2 = document.getElementById('gaugeTemp');
+  const el3 = document.getElementById('svgTemp');
+  if(el) el.textContent = t+'°C';
+  if(el2) el2.innerHTML = t+'<span style="font-size:12px">°C</span>';
+  if(el3) el3.textContent = t+'°C';
+}, 3000);
+</script>
+</body>
+</html>
